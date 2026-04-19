@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/static/(.*)", "dest": "/static/$1" },
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/manifest.json", "dest": "/manifest.json" },
+    { "src": "/logo192.png", "dest": "/logo192.png" },
+    { "src": "/logo512.png", "dest": "/logo512.png" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "env": {
+    "REACT_APP_SUPABASE_URL": "https://zriekzmnawmukjfdfndq.supabase.co",
+    "REACT_APP_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpyaWVrem1uYXdtdWtqZmRmbmRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODE3OTAsImV4cCI6MjA5MTI1Nzc5MH0.xeyQ_eCFnS7xK9yrtxbRSh5vlT1v1M74urvLuUOl7EU",
+    "REACT_APP_API_URL": "http://luxeelanka.publicvm.com:5000/api"
+  }
+}

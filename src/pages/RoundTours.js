@@ -1,10 +1,8 @@
+// RoundTours.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from '../config/axios'; // This already has the base URL configured
+import { supabase } from '../services/supabaseService';
 import '../styles/RoundTours.css';
-
-// Remove this line - axios already has the base URL
-// const API_URL = process.env.REACT_APP_API_URL || 'https://luxe-lanka-backend.vercel.app/api';
 
 function RoundTours() {
   const navigate = useNavigate();
@@ -21,10 +19,15 @@ function RoundTours() {
   const fetchRoundTours = async () => {
     try {
       setLoading(true);
-      // Use just '/round-tours' - axios will use the base URL from config
-      const response = await axios.get('/round-tours');
-      console.log('Round tours loaded:', response.data);
-      setTourDurations(response.data);
+      const { data, error } = await supabase
+        .from('roundtours')
+        .select('*')
+        .order('days', { ascending: true });
+      
+      if (error) throw error;
+      
+      console.log('Round tours loaded:', data);
+      setTourDurations(data || []);
       setError(null);
     } catch (error) {
       console.error('Error fetching round tours:', error);
@@ -41,7 +44,7 @@ function RoundTours() {
   const handleQuickInquiry = (tour, e) => {
     e.stopPropagation();
     const message = `Hi! I'm interested in the ${tour.days}-day tour package (${tour.title}). Can you provide more details and availability?`;
-    window.open(`https://wa.me/94725335460?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/94774120009?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   if (loading) {
@@ -68,8 +71,12 @@ function RoundTours() {
     );
   }
 
+  const uniqueDurations = Array.from(new Set(tourDurations.map(t => Number(t.days))))
+    .filter(days => !Number.isNaN(days))
+    .sort((a, b) => a - b);
+
   const filteredTours = selectedDuration 
-    ? tourDurations.filter(t => t.days === selectedDuration) 
+    ? tourDurations.filter(t => Number(t.days) === selectedDuration) 
     : tourDurations;
 
   return (
@@ -77,10 +84,17 @@ function RoundTours() {
       {/* Main Navigation Bar */}
       <nav className="main-nav">
         <div className="nav-container">
-          <div className="logo">🌴 Luxe Lanka Tours</div>
-          <button className="menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            <i className="fas fa-bars"></i>
-          </button>
+          <div className="logo">🌴 Tour Guide SriLanka</div>
+          <div className="menu-container">
+            <button className="menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              <div className="hamburger-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </button>
+            <span className="menu-text">Menu</span>
+          </div>
           <div className={`nav-links ${mobileMenuOpen ? 'show' : ''}`}>
             <Link to="/" className="glass-nav-btn" onClick={() => setMobileMenuOpen(false)}>
               <i className="fas fa-home"></i> Home
@@ -110,16 +124,21 @@ function RoundTours() {
       {/* Orange Info Bar */}
       <div className="info-bar">
         <div className="info-bar-content">
-          <span><i className="fas fa-phone-alt"></i> +94 72 533 5460</span>
-          <span><i className="fas fa-envelope"></i> hello@luxelanka.com</span>
+          <span><i className="fas fa-phone-alt"></i> +94 72 402 4002</span>
           <span><i className="fas fa-clock"></i> 24/7 Support</span>
         </div>
+      </div>
+
+      <div className="page-action-row">
+        <button className="page-back-btn" onClick={() => window.history.back()} >
+          <i className="fas fa-arrow-left"></i> Back
+        </button>
       </div>
 
       {/* Floating Social Media Icons */}
       <div className="floating-social">
         <a
-          href="https://wa.me/94725335460"
+          href="https://wa.me/94774120009"
           target="_blank"
           rel="noopener noreferrer"
           className="float-glass-btn whatsapp"
@@ -131,19 +150,6 @@ function RoundTours() {
             style={{ width: "80px", height: "80px" }}
           />
         </a>
-        <a
-          href="https://instagram.com/luxelanka"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="float-glass-btn instagram"
-          aria-label="Follow on Instagram"
-        >
-          <img
-            src="https://static.vecteezy.com/system/resources/thumbnails/018/930/413/small/instagram-logo-instagram-icon-transparent-free-png.png"
-            alt="Instagram"
-            style={{ width: "95px", height: "95px" }}
-          />
-        </a>
       </div>
 
       {/* Hero Section */}
@@ -152,7 +158,7 @@ function RoundTours() {
           <h1>Round Tours in Sri Lanka</h1>
           <p>Discover the pearl of the Indian Ocean with our carefully crafted tour packages</p>
           <div className="hero-badge">
-            <i className="fas fa-star"></i> 7 to 14 Days Customizable Tours
+            <i className="fas fa-star"></i> 5 to 14 Days Customizable Tours
           </div>
         </div>
       </div>
@@ -162,16 +168,20 @@ function RoundTours() {
         <div className="filter-container">
           <h3>Select Tour Duration</h3>
           <div className="duration-buttons">
-            {[7, 8, 9, 10, 11, 12, 13, 14].map(days => (
-              <button
-                key={days}
-                className={`duration-btn ${selectedDuration === days ? 'active' : ''}`}
-                onClick={() => setSelectedDuration(selectedDuration === days ? null : days)}
-              >
-                <span className="days">{days}</span>
-                <span className="nights">Days</span>
-              </button>
-            ))}
+            {uniqueDurations.length > 0 ? (
+              uniqueDurations.map(days => (
+                <button
+                  key={days}
+                  className={`duration-btn ${selectedDuration === days ? 'active' : ''}`}
+                  onClick={() => setSelectedDuration(selectedDuration === days ? null : days)}
+                >
+                  <span className="days">{days}</span>
+                  <span className="nights">Days</span>
+                </button>
+              ))
+            ) : (
+              <div className="no-durations-message">No duration filters available yet.</div>
+            )}
           </div>
         </div>
       </div>
@@ -180,7 +190,8 @@ function RoundTours() {
       <div className="tours-container">
         <div className="tours-header">
           <h2>Our Round Tour Packages</h2>
-          <p>Choose from 7 to 14 days of unforgettable experiences</p>
+          <br></br>
+          <p>Choose from 5 to 14 days of unforgettable experiences</p>
         </div>
 
         <div className="tours-grid">
@@ -199,8 +210,12 @@ function RoundTours() {
                   <p className="tour-description">{tour.description}</p>
                   <div className="tour-footer">
                     <div className="tour-price">
-                      <span className="price">{tour.price}</span>
-                      <span className="per-person">per person</span>
+                      <span className="price">
+                        {tour.price !== '' && tour.price != null ? tour.price : 'Contact for price'}
+                      </span>
+                      {tour.price !== '' && tour.price != null && (
+                        <span className="per-person">per person</span>
+                      )}
                     </div>
                     <div className="tour-actions">
                       <button className="view-details-btn">View Details →</button>
@@ -222,16 +237,10 @@ function RoundTours() {
 
       {/* Footer */}
       <footer>
-        <p>© 2025 Luxe Lanka — Premium Driver & Tour Experts</p>
+        <p>© 2026 Tour Guide SriLanka — Premium Driver & Tour Experts</p>
         <div className="footer-social">
-          <a href="https://wa.me/94725335460" target="_blank" rel="noopener noreferrer">
+          <a href="https://wa.me/94774120009" target="_blank" rel="noopener noreferrer">
             <i className="fab fa-whatsapp"></i>
-          </a>
-          <a href="https://instagram.com/luxelanka" target="_blank" rel="noopener noreferrer">
-            <i className="fab fa-instagram"></i>
-          </a>
-          <a href="mailto:hello@luxelanka.com">
-            <i className="fas fa-envelope"></i>
           </a>
         </div>
       </footer>

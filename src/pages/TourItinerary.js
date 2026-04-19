@@ -1,314 +1,198 @@
+// TourItinerary.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { supabase } from '../services/supabaseService';
 import '../styles/TourItinerary.css';
 
 function TourItinerary() {
-  const { days } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const [tourData, setTourData] = useState(null);
   const [activeDay, setActiveDay] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [itineraryDays, setItineraryDays] = useState([]);
 
-  // Fetch tour data based on duration
+  // Fetch tour data based on ID
   useEffect(() => {
     const fetchTourData = async () => {
       setLoading(true);
       try {
-        const data = await getTourData(days);
-        setTourData(data);
+        // Fetch tour details
+        const { data: tour, error: tourError } = await supabase
+          .from('roundtours')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (tourError) throw tourError;
+        
+        setTourData(tour);
+        
+        // Parse itinerary if exists
+        if (tour.itinerary) {
+          try {
+            const parsedItinerary = JSON.parse(tour.itinerary);
+            setItineraryDays(parsedItinerary);
+          } catch (e) {
+            console.error('Error parsing itinerary:', e);
+            setItineraryDays([]);
+          }
+        } else {
+          // Generate default itinerary if none exists
+          generateDefaultItinerary(tour);
+        }
+        
         setError(null);
       } catch (err) {
-        setError('Failed to load itinerary. Please try again.');
         console.error('Error loading tour data:', err);
+        setError('Failed to load itinerary. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTourData();
-  }, [days]);
+    if (id) {
+      fetchTourData();
+    }
+  }, [id]);
 
-  const getTourData = async (duration) => {
-    const tourDataMap = {
-      '7': {
-        title: "7 Days - Cultural & Nature Explorer",
-        duration: "7 Days / 6 Nights",
-        price: "$650",
-        description: "Perfect for first-time visitors. Experience the cultural triangle, hill country, and beautiful beaches.",
-        totalDays: 7
-      },
-      '8': {
-        title: "8 Days - Heritage & Wildlife Journey",
-        duration: "8 Days / 7 Nights",
-        price: "$750",
-        description: "Extended tour with more wildlife safaris and cultural experiences.",
-        totalDays: 8
-      },
-      '9': {
-        title: "9 Days - Complete Island Experience",
-        duration: "9 Days / 8 Nights",
-        price: "$850",
-        description: "Comprehensive tour covering all major attractions across the island.",
-        totalDays: 9
-      },
-      '10': {
-        title: "10 Days - Ultimate Sri Lanka Adventure",
-        duration: "10 Days / 9 Nights",
-        price: "$950",
-        description: "In-depth exploration with more time at each destination.",
-        totalDays: 10
-      },
-      '11': {
-        title: "11 Days - Luxury & Culture Fusion",
-        duration: "11 Days / 10 Nights",
-        price: "$1200",
-        description: "Premium accommodations with exclusive experiences.",
-        totalDays: 11
-      },
-      '12': {
-        title: "12 Days - Off the Beaten Path",
-        duration: "12 Days / 11 Nights",
-        price: "$1100",
-        description: "Discover hidden gems and less touristy locations.",
-        totalDays: 12
-      },
-      '13': {
-        title: "13 Days - Deep Cultural Immersion",
-        duration: "13 Days / 12 Nights",
-        price: "$1250",
-        description: "Extended cultural experience with local interactions.",
-        totalDays: 13
-      },
-      '14': {
-        title: "14 Days - Grand Sri Lanka Tour",
-        duration: "14 Days / 13 Nights",
-        price: "$1450",
-        description: "Complete two-week journey covering every major region.",
-        totalDays: 14
-      }
-    };
-
-    return tourDataMap[duration] || tourDataMap['7'];
-  };
-
-  const getDayActivities = (dayNumber) => {
-    // Base activities for first 7 days
-    const baseActivities = {
+  const generateDefaultItinerary = (tour) => {
+    const days = tour.total_days || tour.days || 7;
+    const defaultDays = [];
+    
+    const defaultActivities = {
       1: {
-        title: "Arrival & Sigiriya - Ancient Rock Fortress",
-        image: "https://images.pexels.com/photos/1603650/sigiriya-lion-rock-sri-lanka-1603650.jpg",
+        title: "Arrival & Transfer to Hotel",
         activities: [
           "Arrival at Colombo International Airport",
           "Meet & greet by your personal driver",
-          "Transfer to Sigiriya (approx 3.5 hours)",
-          "Check-in at hotel",
-          "Evening village tour with traditional Sri Lankan dinner",
-          "Overnight stay in Sigiriya"
+          "Transfer to hotel",
+          "Check-in and relaxation",
+          "Welcome dinner"
         ]
       },
       2: {
-        title: "Sigiriya & Polonnaruwa - Ancient Cities",
-        image: "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg",
+        title: "Sigiriya & Ancient City Exploration",
         activities: [
           "Early morning Sigiriya Lion Rock climb",
           "Ancient rock fortress exploration",
           "Water gardens and ancient frescoes",
-          "Visit Polonnaruwa ancient city",
-          "Gal Vihara rock temple",
-          "Evening leisure time at hotel"
+          "Village tour with traditional lunch"
         ]
       },
       3: {
-        title: "Dambulla & Kandy - Cultural Capital",
-        image: "https://images.pexels.com/photos/753626/pexels-photo-753626.jpeg",
+        title: "Kandy - Cultural Capital",
         activities: [
-          "Dambulla Cave Temple (UNESCO site)",
-          "Spice Garden tour with aromatherapy",
-          "Matale Hindu Temple",
-          "Arrival in Kandy - last kingdom of Sri Lanka",
+          "Visit Dambulla Cave Temple",
+          "Spice Garden tour",
+          "Arrival in Kandy",
           "Temple of the Tooth Relic",
           "Kandyan Cultural Dance Show"
         ]
       },
       4: {
-        title: "Kandy to Nuwara Eliya - Tea Country",
-        image: "https://images.pexels.com/photos/1603650/sigiriya-lion-rock-sri-lanka-1603650.jpg",
+        title: "Nuwara Eliya - Tea Country",
         activities: [
-          "Royal Botanical Gardens (Peradeniya)",
+          "Royal Botanical Gardens",
           "Tea factory and plantation visit",
           "Ramboda Waterfalls",
-          "Arrival in Nuwara Eliya (Little England)",
-          "Gregory Lake stroll",
-          "Strawberry farm visit"
+          "Arrival in Nuwara Eliya",
+          "Gregory Lake stroll"
         ]
       },
       5: {
-        title: "Nuwara Eliya to Ella - Scenic Train Ride",
-        image: "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg",
+        title: "Ella - Scenic Beauty",
         activities: [
-          "Scenic train ride to Ella (most beautiful train journey)",
-          "Nine Arch Bridge",
+          "Scenic train ride to Ella",
+          "Nine Arch Bridge visit",
           "Little Adam's Peak hike",
           "Ravana Falls",
-          "Ella Gap viewpoint",
-          "Evening relaxation"
+          "Ella Gap viewpoint"
         ]
       },
       6: {
-        title: "Yala Safari & Mirissa Beach",
-        image: "https://images.pexels.com/photos/753626/pexels-photo-753626.jpeg",
+        title: "Yala National Park Safari",
         activities: [
-          "Early morning Yala National Park safari",
-          "Wildlife spotting - leopards, elephants, bears",
-          "Transfer to Mirissa",
+          "Early morning Yala safari",
+          "Wildlife spotting - leopards, elephants",
+          "Transfer to beach area",
           "Beach relaxation",
-          "Coconut Tree Hill sunset view",
-          "Fresh seafood dinner"
+          "Sunset view"
         ]
       },
       7: {
-        title: "Whale Watching & Galle Fort",
-        image: "https://images.pexels.com/photos/1603650/sigiriya-lion-rock-sri-lanka-1603650.jpg",
+        title: "Galle Fort & Departure",
         activities: [
-          "Whale watching excursion (seasonal - Nov to April)",
-          "Visit Galle Dutch Fort (UNESCO site)",
+          "Visit Galle Dutch Fort",
           "Lighthouse and ramparts walk",
           "Turtle Hatchery visit",
-          "Departure preparation"
+          "Transfer to airport",
+          "Departure with wonderful memories"
         ]
       }
     };
-
-    // Extended activities for days beyond 7
-    const extendedActivities = {
-      8: {
-        title: "Bentota Water Sports & Madu River",
-        image: "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg",
-        activities: [
-          "Water sports at Bentota Beach",
-          "Jet skiing and banana boat rides",
-          "Madu River boat safari",
-          "Mangrove forest exploration",
-          "Fish therapy experience",
-          "Beach relaxation"
-        ]
-      },
-      9: {
-        title: "Colombo City Tour",
-        image: "https://images.pexels.com/photos/753626/pexels-photo-753626.jpeg",
-        activities: [
-          "Gangaramaya Temple",
-          "Independence Square",
-          "Galle Face Green",
-          "Local market shopping",
-          "Traditional Sri Lankan lunch",
-          "Colombo Museum"
-        ]
-      },
-      10: {
-        title: "Anuradhapura Ancient City",
-        image: "https://images.pexels.com/photos/1603650/sigiriya-lion-rock-sri-lanka-1603650.jpg",
-        activities: [
-          "Sri Maha Bodhi Tree (2600 years old)",
-          "Ruwanwelisaya Stupa",
-          "Abhayagiri Monastery",
-          "Mihintale Rock Temple",
-          "Ancient reservoirs and gardens"
-        ]
-      },
-      11: {
-        title: "Trincomalee & East Coast",
-        image: "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg",
-        activities: [
-          "Koneswaram Temple",
-          "Swami Rock viewpoint",
-          "Pigeon Island snorkeling",
-          "Nilaveli Beach",
-          "Dolphin watching"
-        ]
-      },
-      12: {
-        title: "Jaffna - Tamil Culture",
-        image: "https://images.pexels.com/photos/753626/pexels-photo-753626.jpeg",
-        activities: [
-          "Nallur Kandaswamy Temple",
-          "Jaffna Fort",
-          "Local market experience",
-          "Cashew nut tasting",
-          "Cultural performances"
-        ]
-      },
-      13: {
-        title: "Sinharaja Rainforest",
-        image: "https://images.pexels.com/photos/1603650/sigiriya-lion-rock-sri-lanka-1603650.jpg",
-        activities: [
-          "Rainforest trekking",
-          "Bird watching (endemic species)",
-          "Waterfall visit",
-          "Butterfly watching",
-          "Medicinal plant tour"
-        ]
-      },
-      14: {
-        title: "Departure Day",
-        image: "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg",
-        activities: [
-          "Last minute souvenir shopping",
-          "Transfer to Colombo Airport",
-          "Final memories of Sri Lanka",
-          "Departure with wonderful experiences"
-        ]
+    
+    for (let i = 1; i <= days; i++) {
+      if (defaultActivities[i]) {
+        defaultDays.push({
+          day_number: i,
+          title: defaultActivities[i].title,
+          image_url: "",
+          activities: defaultActivities[i].activities
+        });
+      } else {
+        defaultDays.push({
+          day_number: i,
+          title: `Day ${i} - Sri Lanka Exploration`,
+          image_url: "",
+          activities: [
+            "Explore local attractions",
+            "Cultural experiences",
+            "Scenic viewpoints",
+            "Local cuisine tasting"
+          ]
+        });
       }
-    };
+    }
+    
+    setItineraryDays(defaultDays);
+  };
 
-    if (dayNumber <= 7) {
-      return baseActivities[dayNumber] || {
-        title: `Day ${dayNumber} - Sri Lanka Exploration`,
-        image: "https://images.pexels.com/photos/753626/pexels-photo-753626.jpeg",
-        activities: [
-          "Explore local attractions",
-          "Cultural experiences",
-          "Scenic viewpoints",
-          "Local cuisine tasting",
-          "Optional activities available"
-        ]
-      };
-    } else if (dayNumber <= 14) {
-      return extendedActivities[dayNumber] || {
-        title: `Day ${dayNumber} - Extended Exploration`,
-        image: "https://images.pexels.com/photos/1603650/sigiriya-lion-rock-sri-lanka-1603650.jpg",
-        activities: [
-          "Customized activities based on your preferences",
-          "Local cultural experiences",
-          "Hidden gems exploration",
-          "Traditional cuisine tasting",
-          "Contact your driver for personalized recommendations"
-        ]
+  const getDayActivities = (dayNumber) => {
+    const day = itineraryDays.find(d => d.day_number === dayNumber);
+    if (day) {
+      return {
+        title: day.title,
+        image: day.image_url || "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg",
+        activities: Array.isArray(day.activities) ? day.activities : 
+                   (typeof day.activities === 'string' ? JSON.parse(day.activities) : [])
       };
     }
     
+    // Fallback
     return {
-      title: `Day ${dayNumber} - Adventure Day`,
+      title: `Day ${dayNumber} - Sri Lanka Exploration`,
       image: "https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg",
       activities: [
-        "Morning exploration",
-        "Afternoon activities",
-        "Evening relaxation",
-        "Cultural immersion"
+        "Explore local attractions",
+        "Cultural experiences",
+        "Scenic viewpoints",
+        "Local cuisine tasting"
       ]
     };
   };
 
   const handleInquiry = () => {
     const message = `Hi! I'm interested in the ${tourData?.title} (${tourData?.duration}). Can you provide more details and availability for this tour?`;
-    window.open(`https://wa.me/94725335460?text=${encodeURIComponent(message)}`, '_blank');
+    window.open(`https://wa.me/94774120009?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleDayInquiry = (day) => {
-    const message = `Hi! I'm interested in Day ${day} of the ${tourData?.title} (${tourData?.duration}). Can you provide more details about this day's activities and pricing?`;
-    window.open(`https://wa.me/94725335460?text=${encodeURIComponent(message)}`, '_blank');
+    const dayInfo = getDayActivities(day);
+    const message = `Hi! I'm interested in Day ${day} of the ${tourData?.title} (${tourData?.duration}). Can you provide more details about "${dayInfo.title}" and pricing?`;
+    window.open(`https://wa.me/94774120009?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   if (loading) {
@@ -320,36 +204,37 @@ function TourItinerary() {
     );
   }
 
-  if (error) {
+  if (error || !tourData) {
     return (
       <div className="error-container">
         <div className="error-card">
           <i className="fas fa-exclamation-triangle"></i>
           <h2>Error Loading Itinerary</h2>
-          <p>{error}</p>
-          <button onClick={() => window.location.reload()} className="btn-glass-round">
-            Try Again
-          </button>
+          <p>{error || 'Tour not found'}</p>
+         
         </div>
       </div>
     );
   }
 
-  if (!tourData) {
-    return null;
-  }
-
-  const totalDays = tourData.totalDays;
+  const totalDays = tourData.total_days || tourData.days || 7;
 
   return (
     <div className="itinerary-page">
       {/* Main Navigation Bar - Top */}
       <nav className="main-nav">
         <div className="nav-container">
-          <div className="logo">🌴 Luxe Lanka Tours</div>
-          <button className="menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            <i className="fas fa-bars"></i>
-          </button>
+          <div className="logo">🌴 Tour Guide SriLanka</div>
+          <div className="menu-container">
+            <button className="menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              <div className="hamburger-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </button>
+            <span className="menu-text">Menu</span>
+          </div>
           <div className={`nav-links ${mobileMenuOpen ? 'show' : ''}`}>
             <Link to="/" className="glass-nav-btn" onClick={() => setMobileMenuOpen(false)}>
               <i className="fas fa-home"></i> Home
@@ -379,16 +264,21 @@ function TourItinerary() {
       {/* Orange Info Bar - Below Main Navigation */}
       <div className="info-bar">
         <div className="info-bar-content">
-          <span><i className="fas fa-phone-alt"></i> +94 72 533 5460</span>
-          <span><i className="fas fa-envelope"></i> hello@luxelanka.com</span>
+          <span><i className="fas fa-phone-alt"></i> +94 72 402 4002</span>
           <span><i className="fas fa-clock"></i> 24/7 Support</span>
         </div>
+      </div>
+
+      <div className="page-action-row">
+        <button className="page-back-btn" onClick={() => window.history.back()}>
+          <i className="fas fa-arrow-left"></i> Back
+        </button>
       </div>
 
       {/* Floating Social Media Icons */}
       <div className="floating-social">
         <a
-          href="https://wa.me/94725335460"
+          href="https://wa.me/94774120009"
           target="_blank"
           rel="noopener noreferrer"
           className="float-glass-btn whatsapp"
@@ -397,33 +287,20 @@ function TourItinerary() {
           <img
             src="https://static.vecteezy.com/system/resources/previews/024/398/617/non_2x/whatsapp-logo-icon-isolated-on-transparent-background-free-png.png"
             alt="WhatsApp"
-          />
-        </a>
-        <a
-          href="https://instagram.com/luxelanka"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="float-glass-btn instagram"
-          aria-label="Follow on Instagram"
-        >
-          <img
-            src="https://static.vecteezy.com/system/resources/thumbnails/018/930/413/small/instagram-logo-instagram-icon-transparent-free-png.png"
-            alt="Instagram"
+            style={{ width: "80px", height: "80px" }}
           />
         </a>
       </div>
 
       <main className="itinerary-content">
-        <button className="back-button" onClick={() => navigate('/round-tours')}>
-          <i className="fas fa-arrow-left"></i> Back to Tours
-        </button>
-
         {/* Header Section */}
         <div className="itinerary-header">
           <h1>{tourData.title}</h1>
           <div className="tour-meta">
             <span><i className="fas fa-clock"></i> {tourData.duration}</span>
-            <span><i className="fas fa-tag"></i> {tourData.price}</span>
+            {tourData.price !== '' && tourData.price != null && (
+              <span><i className="fas fa-tag"></i> {tourData.price}</span>
+            )}
             <span><i className="fas fa-map-marker-alt"></i> Sri Lanka</span>
           </div>
           <p className="description">{tourData.description}</p>
@@ -456,6 +333,10 @@ function TourItinerary() {
                 src={getDayActivities(activeDay).image} 
                 alt={`Day ${activeDay} - ${getDayActivities(activeDay).title}`}
                 loading="lazy"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://images.pexels.com/photos/2387873/pexels-photo-2387873.jpeg';
+                }}
               />
             </div>
             <div className="day-content">
@@ -547,16 +428,10 @@ function TourItinerary() {
 
       {/* Footer */}
       <footer>
-        <p>© 2025 Luxe Lanka — Premium Driver & Tour Experts</p>
+        <p>© 2026 Tour Guide SriLanka— Premium Driver & Tour Experts</p>
         <div className="footer-social">
-          <a href="https://wa.me/94725335460" target="_blank" rel="noopener noreferrer">
+          <a href="https://wa.me/94774120009" target="_blank" rel="noopener noreferrer">
             <i className="fab fa-whatsapp"></i>
-          </a>
-          <a href="https://instagram.com/luxelanka" target="_blank" rel="noopener noreferrer">
-            <i className="fab fa-instagram"></i>
-          </a>
-          <a href="mailto:hello@luxelanka.com">
-            <i className="fas fa-envelope"></i>
           </a>
         </div>
       </footer>

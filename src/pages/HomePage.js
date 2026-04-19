@@ -1,14 +1,13 @@
+// HomePage.js
 import React, { useState, useEffect } from 'react';
-import axios from '../config/axios';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 import '../styles/HomePage.css';
-// Use environment variable for API URL (will work in both development and production)
-// At the top of HomePage.js, replace line 8 with:
-const API_URL = process.env.REACT_APP_API_URL || 'https://luxe-lanka-backend.vercel.app/api';
+import { luxelankaService } from '../services/supabaseService';
+
 function HomePage() {
     const [activeSection, setActiveSection] = useState('home');
     const [packages, setPackages] = useState([]);
@@ -30,108 +29,180 @@ function HomePage() {
         rating: '5'
     });
 
+    // Stats counter animation
+    const [stats, setStats] = useState({
+        customers: 0,
+        travelers: 0,
+        experience: 0,
+        support: 0
+    });
+
     useEffect(() => {
         fetchData();
+        startStatsCounter();
     }, []);
 
-   const fetchData = async () => {
-    try {
-        setLoading(true);
-        setError(null);
+    const startStatsCounter = () => {
+        const targets = {
+            customers: 500,
+            travelers: 1000,
+            experience: 15,
+            support: 24
+        };
 
-        console.log('Fetching data from API:', API_URL);
+        const duration = 2000; // 2 seconds
+        const interval = 20;
+        const steps = duration / interval;
 
-        // Test API connection first
-        const testResponse = await axios.get('/test');
-        console.log('API connection test:', testResponse.data);
+        let currentStep = 0;
 
-        const [packagesRes, vehiclesRes, driversRes, videosRes, reviewsRes] = await Promise.all([
-            axios.get('/packages').catch(err => ({ data: [] })),
-            axios.get('/vehicles').catch(err => ({ data: [] })),
-            axios.get('/drivers').catch(err => ({ data: [] })),
-            axios.get('/videos').catch(err => ({ data: [] })),
-            axios.get('/reviews').catch(err => ({ data: [] }))
-        ]);
+        const counter = setInterval(() => {
+            currentStep++;
+            const progress = currentStep / steps;
 
-        setPackages(packagesRes.data || []);
-        setVehicles(vehiclesRes.data || []);
-        setDrivers(driversRes.data || []);
-        setVideos(videosRes.data || []);
-        setReviews(reviewsRes.data || []);
+            setStats({
+                customers: Math.min(Math.floor(targets.customers * progress), targets.customers),
+                travelers: Math.min(Math.floor(targets.travelers * progress), targets.travelers),
+                experience: Math.min(Math.floor(targets.experience * progress), targets.experience),
+                support: Math.min(Math.floor(targets.support * progress), targets.support)
+            });
 
-        console.log('Data loaded successfully:', {
-            packages: packagesRes.data?.length,
-            vehicles: vehiclesRes.data?.length,
-            drivers: driversRes.data?.length,
-            videos: videosRes.data?.length,
-            reviews: reviewsRes.data?.length
-        });
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        
-        // Provide more specific error messages
-        let errorMessage = 'Failed to load data. ';
-        if (error.code === 'ERR_NETWORK') {
-            errorMessage += 'Cannot connect to server. Please check your internet connection.';
-        } else if (error.response?.status === 404) {
-            errorMessage += 'API endpoint not found.';
-        } else if (error.response?.status === 500) {
-            errorMessage += 'Server error. Please try again later.';
-        } else {
-            errorMessage += 'Please check your connection and try again.';
+            if (currentStep >= steps) {
+                clearInterval(counter);
+            }
+        }, interval);
+    };
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            console.log('Fetching data from Supabase...');
+
+            const [packagesData, vehiclesData, driversData, videosData, reviewsData] = await Promise.all([
+                luxelankaService.getPackages().catch(err => {
+                    console.error('Error fetching packages:', err);
+                    return [];
+                }),
+                luxelankaService.getVehicles().catch(err => {
+                    console.error('Error fetching vehicles:', err);
+                    return [];
+                }),
+                luxelankaService.getDrivers().catch(err => {
+                    console.error('Error fetching drivers:', err);
+                    return [];
+                }),
+                luxelankaService.getVideos().catch(err => {
+                    console.error('Error fetching videos:', err);
+                    return [];
+                }),
+                luxelankaService.getReviews().catch(err => {
+                    console.error('Error fetching reviews:', err);
+                    return [];
+                })
+            ]);
+
+            setPackages(packagesData || []);
+            setVehicles(vehiclesData || []);
+            setDrivers(driversData || []);
+            setVideos(videosData || []);
+            setReviews(reviewsData || []);
+
+            console.log('Data loaded successfully from Supabase:', {
+                packages: packagesData?.length,
+                vehicles: vehiclesData?.length,
+                drivers: driversData?.length,
+                videos: videosData?.length,
+                reviews: reviewsData?.length
+            });
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            
+            let errorMessage = 'Failed to load data. ';
+            if (error.message?.includes('JWT') || error.message?.includes('API key')) {
+                errorMessage += 'Invalid Supabase API key. Please check your .env file.';
+            } else if (error.message?.includes('Failed to fetch')) {
+                errorMessage += 'Cannot connect to Supabase. Please check your internet connection.';
+            } else {
+                errorMessage += error.message || 'Please check your connection and try again.';
+            }
+            
+            setError(errorMessage);
+            setPackages([]);
+            setVehicles([]);
+            setDrivers([]);
+            setVideos([]);
+            setReviews([]);
+        } finally {
+            setLoading(false);
         }
-        
-        setError(errorMessage);
-        
-        // Set empty data to prevent undefined errors
-        setPackages([]);
-        setVehicles([]);
-        setDrivers([]);
-        setVideos([]);
-        setReviews([]);
-    } finally {
-        setLoading(false);
-    }
-};
+    };
+
+    // Function to convert YouTube URL to embed URL with mobile-friendly parameters
+    const getYouTubeEmbedUrl = (url) => {
+        if (!url) return '';
+
+        const trimmedUrl = url.trim();
+        const patterns = [
+            /(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+            /[?&]v=([A-Za-z0-9_-]{11})/, 
+            /youtu\.be\/([A-Za-z0-9_-]{11})/, 
+            /embed\/([A-Za-z0-9_-]{11})/,
+            /shorts\/([A-Za-z0-9_-]{11})/
+        ];
+
+        let videoId = null;
+        for (const pattern of patterns) {
+            const match = trimmedUrl.match(pattern);
+            if (match && match[1]) {
+                videoId = match[1];
+                break;
+            }
+        }
+
+        if (videoId) {
+            return `https://www.youtube.com/embed/${videoId}?playsinline=1&modestbranding=1&rel=0&enablejsapi=1`;
+        }
+
+        return trimmedUrl;
+    };
+
     const handleContactSubmit = async (e) => {
         e.preventDefault();
 
-        // Format message for WhatsApp
         const whatsappMessage = `*New Tour Inquiry*%0A%0A*Name:* ${contactFormData.name}%0A*Email:* ${contactFormData.email}%0A*Message:* ${contactFormData.message}%0A%0A*Sent from Luxe Lanka Website*`;
 
-        // Open WhatsApp with pre-filled message
-        const whatsappUrl = `https://wa.me/94725335460?text=${whatsappMessage}`;
+        const whatsappUrl = `https://wa.me/94774120009?text=${whatsappMessage}`;
         window.open(whatsappUrl, '_blank');
 
-        // Optional: Also send to your backend if you want to store inquiries
         try {
-            await axios.post(`${API_URL}/contact`, contactFormData);
-            console.log('Contact form data saved to database');
+            await luxelankaService.submitContactMessage(contactFormData);
+            console.log('Contact message saved to Supabase');
         } catch (error) {
-            console.error('Error saving contact form:', error);
-            // Don't show error to user since WhatsApp already opened
+            console.error('Error saving contact message:', error);
         }
 
-        // Show success message
         alert('Message prepared for WhatsApp! Click send to complete.');
-
-        // Reset form
         setContactFormData({ name: '', email: '', message: '' });
     };
 
     const handleReviewSubmit = async (e) => {
         e.preventDefault();
+        
         const formData = {
             name: reviewFormData.name,
             text: reviewFormData.review,
             rating: parseInt(reviewFormData.rating)
         };
+        
         try {
-            await axios.post(`${API_URL}/reviews`, formData);
-            alert('Thank you for your review!');
+            await luxelankaService.submitReview(formData);
+            alert('Thank you for your review! It will appear after admin approval.');
             setReviewFormData({ name: '', review: '', rating: '5' });
             fetchData();
         } catch (error) {
+            console.error('Error submitting review:', error);
             alert('Error submitting review. Please try again.');
         }
     };
@@ -155,6 +226,10 @@ function HomePage() {
         return videos.filter(v => v.category === category);
     };
 
+    const handleBackToHome = () => {
+        setActiveSection('home');
+    };
+
     const getHomeVideos = () => {
         const homeVideos = getFilteredVideos('home');
         if (homeVideos.length > 0) return homeVideos;
@@ -165,7 +240,7 @@ function HomePage() {
         return (
             <div className="loading-container">
                 <div className="spinner"></div>
-                <p>Loading Luxe Lanka...</p>
+                <p>Loading Tour Guide SriLanka...</p>
             </div>
         );
     }
@@ -185,16 +260,45 @@ function HomePage() {
         );
     }
 
+    // Reusable video component
+    const VideoIframe = ({ video }) => {
+        const embedUrl = getYouTubeEmbedUrl(video.embed_code || video.youtube_url);
+        return (
+            <div className="video-glass-card">
+                {embedUrl ? (
+                    <iframe
+                        src={embedUrl}
+                        title={video.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        loading="lazy"
+                    ></iframe>
+                ) : (
+                    <div className="video-error">Unable to load video</div>
+                )}
+                <div className="video-title">{video.title}</div>
+            </div>
+        );
+    };
+
     return (
         <div className="homepage">
             <nav className="glass-nav">
                 <div className="nav-container">
                     <div className="logo">
-                        <img src="/Emojii.png" alt="emoji" className="logo-emoji"
-                            style={{ width: "60px", height: "60px", verticalAlign: "middle" }} />                        Zayaan Tours SriLanka
-                    </div>                    <button className="menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                        <i className="fas fa-bars"></i>
-                    </button>
+                       🌴 Tour Guide SriLanka
+                    </div>                    
+                    <div className="menu-container">
+                        <button className="menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                            <div className="hamburger-icon">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </button>
+                        <span className="menu-text">Menu</span>
+                    </div>
                     <div className={`nav-links ${mobileMenuOpen ? 'show' : ''}`}>
                         <button onClick={() => { setActiveSection('home'); setMobileMenuOpen(false); }} className={`glass-nav-btn ${activeSection === 'home' ? 'active' : ''}`}>
                             <i className="fas fa-home"></i> Home
@@ -202,7 +306,6 @@ function HomePage() {
                         <button onClick={() => { setActiveSection('packages'); setMobileMenuOpen(false); }} className={`glass-nav-btn ${activeSection === 'packages' ? 'active' : ''}`}>
                             <i className="fas fa-umbrella-beach"></i> Tour Packages
                         </button>
-                        {/* Add Round Tours Link */}
                         <a href="/round-tours" className="glass-nav-btn" onClick={() => setMobileMenuOpen(false)}>
                             <i className="fas fa-map-marked-alt"></i> Round Tours
                         </a>
@@ -222,24 +325,24 @@ function HomePage() {
                 </div>
             </nav>
 
-            <nav className="glass-nav">
-                {/* Top Info Bar */}
-                <div className="top-info-bar">
-                    <div className="info-bar-content">
-                        <span><i className="fas fa-phone-alt"></i> +94 72 533 5460</span>
-                        <span><i className="fas fa-envelope"></i> hello@luxelanka.com</span>
-                        <span><i className="fas fa-clock"></i> 24/7 Support</span>
-                    </div>
+            <div className="top-info-bar">
+                <div className="info-bar-content">
+                    <span><i className="fas fa-phone-alt"></i> +94 72 402 4002</span>
+                    <span><i className="fas fa-clock"></i> 24/7 Support</span>
                 </div>
-                <div className="nav-container">
-                    {/* Rest of your navigation */}
-                </div>
-            </nav>
+            </div>
 
-            {/* Floating Social Media Icons - WhatsApp and Instagram */}
+            {activeSection !== 'home' && (
+                <div className="page-action-row">
+                    <button className="page-back-btn" onClick={handleBackToHome}>
+                        <i className="fas fa-arrow-left"></i> Back to home
+                    </button>
+                </div>
+            )}
+
             <div className="floating-social">
                 <a
-                    href="https://wa.me/94725335460"
+                    href="https://wa.me/94774120009"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="float-glass-btn whatsapp"
@@ -251,26 +354,12 @@ function HomePage() {
                         alt="WhatsApp"
                     />
                 </a>
-                <a
-                    href="https://instagram.com/luxelanka"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="float-glass-btn instagram"
-                    aria-label="Follow on Instagram"
-                >
-                    <img
-                        src="https://static.vecteezy.com/system/resources/thumbnails/018/930/413/small/instagram-logo-instagram-icon-transparent-free-png.png"
-                        style={{ width: "90px", height: "90px" }}
-                        alt="Instagram"
-                    />
-                </a>
             </div>
 
             <main className="container">
-                {/* Home Section */}
                 {activeSection === 'home' && (
                     <section className="section active-section">
-                        <div className="hero" style={{ minHeight: "50vh" }}>
+                        <div className="hero">
                             <h1>Explore Sri Lanka in Style</h1>
                             <p>Luxury vehicles, expert drivers, and handcrafted journeys — discover paradise with us.</p>
                             <button onClick={() => setActiveSection('packages')} className="btn-glass-round">
@@ -278,16 +367,77 @@ function HomePage() {
                             </button>
                         </div>
 
+                        {/* Stats Section - New Addition */}
+                        <div className="stats-section">
+                            <div className="stats-container">
+                                <div className="stat-card">
+                                    <div className="stat-icon">
+                                        <i className="fas fa-smile"></i>
+                                    </div>
+                                    <div className="stat-number">
+                                        {stats.customers}+
+                                    </div>
+                                    <div className="stat-label">
+                                        Happy Customers
+                                    </div>
+                                    <div className="stat-description">
+                                        Trusted by travelers worldwide
+                                    </div>
+                                </div>
+                                
+                                <div className="stat-card">
+                                    <div className="stat-icon">
+                                        <i className="fas fa-globe-asia"></i>
+                                    </div>
+                                    <div className="stat-number">
+                                        {stats.travelers}+
+                                    </div>
+                                    <div className="stat-label">
+                                        Happy Travelers
+                                    </div>
+                                    <div className="stat-description">
+                                        Explored Sri Lanka with us
+                                    </div>
+                                </div>
+                                
+                                <div className="stat-card">
+                                    <div className="stat-icon">
+                                        <i className="fas fa-award"></i>
+                                    </div>
+                                    <div className="stat-number">
+                                        {stats.experience}+
+                                    </div>
+                                    <div className="stat-label">
+                                        Years Experience
+                                    </div>
+                                    <div className="stat-description">
+                                        Excellence in service
+                                    </div>
+                                </div>
+                                
+                                <div className="stat-card">
+                                    <div className="stat-icon">
+                                        <i className="fas fa-headset"></i>
+                                    </div>
+                                    <div className="stat-number">
+                                        {stats.support}/7
+                                    </div>
+                                    <div className="stat-label">
+                                        Support
+                                    </div>
+                                    <div className="stat-description">
+                                        Always here to help
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div className="About" style={{ minHeight: "50vh" }}>
+                        <div className="About">
                             <h1>Ayubowan! Welcome to SriLanka</h1>
-                            <p><center>   We're thrilled to have you here. From stunning beaches to rich culture We're excited for you to experience our island!s beauty: Were here to make your stay unforgettable!
+                            <p><center>We're thrilled to have you here. From stunning beaches to rich culture We're excited for you to experience our island's beauty: Were here to make your stay unforgettable!
 
-                                Srilanka - a tropical paradise Located in the indian Dlean, this tiny island nation is a treasure landscapes,
-                                trove of stunning
-                                i rich culture, and warm hospitality. From the misty hills of Nuwara Eliya to the golden beaches of Mirissa, Srilanka is a heaven for travelers.
-                            </center> </p>
-
+                                Srilanka - a tropical paradise Located in the indian Ocean, this tiny island nation is a treasure trove of stunning landscapes, rich culture, and warm hospitality. From the misty hills of Nuwara Eliya to the golden beaches of Mirissa, Srilanka is a heaven for travelers.
+                            </center></p>
 
                             <div className="country-images">
                                 <img src="https://flagcdn.com/w320/us.png" alt="USA" />
@@ -297,8 +447,6 @@ function HomePage() {
                             </div>
                         </div>
 
-
-
                         <div className="video-section">
                             <h2 className="section-title">
                                 <i className="fas fa-video"></i> Video Reviews
@@ -307,16 +455,7 @@ function HomePage() {
                             {getHomeVideos().length > 0 ? (
                                 <div className="video-grid">
                                     {getHomeVideos().map(video => (
-                                        <div key={video.id} className="video-glass-card">
-                                            <iframe
-                                                src={video.embed_code || video.youtube_url}
-                                                title={video.title}
-                                                frameBorder="0"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                            ></iframe>
-                                            <div className="video-title">{video.title}</div>
-                                        </div>
+                                        <VideoIframe key={video.id} video={video} />
                                     ))}
                                 </div>
                             ) : (
@@ -366,7 +505,6 @@ function HomePage() {
                     </section>
                 )}
 
-                {/* Packages Section */}
                 {activeSection === 'packages' && (
                     <section className="section">
                         <h2 className="section-title">
@@ -383,8 +521,10 @@ function HomePage() {
                                         <div className="card-content">
                                             <h3>{pkg.title}</h3>
                                             <p>{pkg.description}</p>
-                                            <div className="price">${pkg.price}</div>
-                                            <button className="btn-outline-glass" onClick={() => window.open('https://wa.me/94725335460', '_blank')}>
+                                            <div className="price">
+                                                {pkg.price !== '' && pkg.price != null ? `$${pkg.price}` : 'Contact for price'}
+                                            </div>
+                                            <button className="btn-outline-glass" onClick={() => window.open('https://wa.me/94774120009', '_blank')}>
                                                 <i className="fab fa-whatsapp"></i> Inquire
                                             </button>
                                         </div>
@@ -402,15 +542,7 @@ function HomePage() {
                             {getFilteredVideos('tour').length > 0 ? (
                                 <div className="video-grid">
                                     {getFilteredVideos('tour').map(video => (
-                                        <div key={video.id} className="video-glass-card">
-                                            <iframe
-                                                src={video.embed_code || video.youtube_url}
-                                                title={video.title}
-                                                frameBorder="0"
-                                                allowFullScreen
-                                            ></iframe>
-                                            <div className="video-title">{video.title}</div>
-                                        </div>
+                                        <VideoIframe key={video.id} video={video} />
                                     ))}
                                 </div>
                             ) : (
@@ -420,7 +552,6 @@ function HomePage() {
                     </section>
                 )}
 
-                {/* Vehicle Section */}
                 {activeSection === 'vehicle' && (
                     <section className="section">
                         <h2 className="section-title">
@@ -437,8 +568,10 @@ function HomePage() {
                                         <div className="card-content">
                                             <h3>{vehicle.name}</h3>
                                             <p>{vehicle.description}</p>
-                                            <div className="price">${vehicle.price_per_day}/day</div>
-                                            <button className="btn-outline-glass" onClick={() => window.open('https://wa.me/94725335460', '_blank')}>
+                                            <div className="price">
+                                                {vehicle.price_per_day !== '' && vehicle.price_per_day != null ? `$${vehicle.price_per_day}/day` : 'Contact for price'}
+                                            </div>
+                                            <button className="btn-outline-glass" onClick={() => window.open('https://wa.me/94774120009', '_blank')}>
                                                 <i className="fab fa-whatsapp"></i> Inquire
                                             </button>
                                         </div>
@@ -456,15 +589,7 @@ function HomePage() {
                             {getFilteredVideos('vehicle').length > 0 ? (
                                 <div className="video-grid">
                                     {getFilteredVideos('vehicle').map(video => (
-                                        <div key={video.id} className="video-glass-card">
-                                            <iframe
-                                                src={video.embed_code || video.youtube_url}
-                                                title={video.title}
-                                                frameBorder="0"
-                                                allowFullScreen
-                                            ></iframe>
-                                            <div className="video-title">{video.title}</div>
-                                        </div>
+                                        <VideoIframe key={video.id} video={video} />
                                     ))}
                                 </div>
                             ) : (
@@ -474,7 +599,6 @@ function HomePage() {
                     </section>
                 )}
 
-                {/* Drivers Section */}
                 {activeSection === 'drivers' && (
                     <section className="section">
                         <h2 className="section-title">
@@ -510,15 +634,7 @@ function HomePage() {
                             {getFilteredVideos('driver').length > 0 ? (
                                 <div className="video-grid">
                                     {getFilteredVideos('driver').map(video => (
-                                        <div key={video.id} className="video-glass-card">
-                                            <iframe
-                                                src={video.embed_code || video.youtube_url}
-                                                title={video.title}
-                                                frameBorder="0"
-                                                allowFullScreen
-                                            ></iframe>
-                                            <div className="video-title">{video.title}</div>
-                                        </div>
+                                        <VideoIframe key={video.id} video={video} />
                                     ))}
                                 </div>
                             ) : (
@@ -528,7 +644,6 @@ function HomePage() {
                     </section>
                 )}
 
-                {/* Reviews Section */}
                 {activeSection === 'reviews' && (
                     <section className="section">
                         <h2 className="section-title">
@@ -590,7 +705,6 @@ function HomePage() {
                     </section>
                 )}
 
-                {/* Contact Section - Enhanced UI with Mobile Optimizations */}
                 {activeSection === 'contact' && (
                     <section className="section contact-section-enhanced">
                         <div className="contact-header">
@@ -601,7 +715,6 @@ function HomePage() {
                         </div>
 
                         <div className="contact-wrapper-enhanced">
-                            {/* Contact Info Card */}
                             <div className="contact-info-card">
                                 <div className="info-card-header">
                                     <i className="fas fa-headset"></i>
@@ -610,49 +723,22 @@ function HomePage() {
                                 </div>
 
                                 <div className="info-items">
-                                    <img scr="" />
                                     <div className="info-item">
                                         <div className="info-icon call-bg">
                                             <img
                                                 src="https://cdn.iconscout.com/icon/free/png-256/free-apple-phone-icon-svg-download-png-493154.png?f=webp"
                                                 style={{ width: "50px", height: "50px" }}
+                                                alt="phone"
                                             />
-                                            <i className="fas fa-phone-alt"></i>
                                         </div>
                                         <div className="info-details">
                                             <span>Call Us</span>
-                                            <a href="tel:+94725335460">+94 72 533 5460</a>
+                                            <a href="tel:+94774120009">+94 77 412 0009</a>
                                             <small>Available 8AM - 10PM</small>
                                         </div>
                                     </div>
 
-                                    <div className="info-item">
-                                        <div className="info-icon email-bg">
-                                            <img
-                                                src="https://static.vecteezy.com/system/resources/previews/058/072/357/non_2x/gmail-app-icon-on-transparent-background-free-png.png"
-                                                style={{ width: "80px", height: "80px" }}
-                                            />
-                                            <i className="fas fa-envelope"></i>
-                                        </div>
-                                        <div className="info-details">
-                                            <span>Email</span>
-                                            <a href="mailto:hello@luxelanka.com">hello@luxelanka.com</a>
-                                            <small>We'll respond within 24hrs</small>
-                                        </div>
-                                    </div>
 
-                                    {/* <div className="info-item">
-                                        <div className="info-icon whatsapp-bg">
-                                            <i className="fab fa-whatsapp"></i>
-                                        </div>
-                                        <div className="info-details">
-                                            <span>WhatsApp</span>
-                                            <a href="https://wa.me/94725335460" target="_blank" rel="noopener noreferrer">
-                                                +94 72 533 5460
-                                            </a>
-                                            <small>Quick response within minutes</small>
-                                        </div>
-                                    </div> */}
                                 </div>
 
                                 <div className="business-hours">
@@ -662,7 +748,6 @@ function HomePage() {
                                 </div>
                             </div>
 
-                            {/* Contact Form Card */}
                             <div className="contact-form-card">
                                 <div className="form-card-header">
                                     <i className="fas fa-paper-plane"></i>
@@ -739,14 +824,13 @@ function HomePage() {
                             </div>
                         </div>
 
-                        {/* Quick Inquiry Options */}
                         <div className="quick-inquiry">
                             <h3><i className="fas fa-bolt"></i> Quick Inquiry</h3>
                             <div className="quick-buttons">
                                 <button
                                     onClick={() => {
                                         const message = "Hi! I'm interested in your tour packages. Can you help me plan my Sri Lanka trip?";
-                                        window.open(`https://wa.me/94725335460?text=${encodeURIComponent(message)}`, '_blank');
+                                        window.open(`https://wa.me/94774120009?text=${encodeURIComponent(message)}`, '_blank');
                                     }}
                                     className="quick-btn"
                                 >
@@ -755,7 +839,7 @@ function HomePage() {
                                 <button
                                     onClick={() => {
                                         const message = "Hi! I'd like to know more about your vehicle rentals. What vehicles do you have available?";
-                                        window.open(`https://wa.me/94725335460?text=${encodeURIComponent(message)}`, '_blank');
+                                        window.open(`https://wa.me/94774120009?text=${encodeURIComponent(message)}`, '_blank');
                                     }}
                                     className="quick-btn"
                                 >
@@ -764,7 +848,7 @@ function HomePage() {
                                 <button
                                     onClick={() => {
                                         const message = "Hi! Can you share more information about your drivers and their experience?";
-                                        window.open(`https://wa.me/94725335460?text=${encodeURIComponent(message)}`, '_blank');
+                                        window.open(`https://wa.me/94774120009?text=${encodeURIComponent(message)}`, '_blank');
                                     }}
                                     className="quick-btn"
                                 >
@@ -773,7 +857,7 @@ function HomePage() {
                                 <button
                                     onClick={() => {
                                         const message = "Hi! I need a custom itinerary for my Sri Lanka tour. Can you help?";
-                                        window.open(`https://wa.me/94725335460?text=${encodeURIComponent(message)}`, '_blank');
+                                        window.open(`https://wa.me/94774120009?text=${encodeURIComponent(message)}`, '_blank');
                                     }}
                                     className="quick-btn"
                                 >
@@ -782,7 +866,62 @@ function HomePage() {
                             </div>
                         </div>
 
-                        {/* Map Section */}
+                        {/* Why Choose Us Section - New Addition */}
+                        <div className="why-choose-us-section">
+                            <h3 className="section-title">
+                                <i className="fas fa-check-circle"></i> Why Choose Zayaan Tours?
+                            </h3>
+                            <div className="features-grid-enhanced">
+                                <div className="feature-card-enhanced">
+                                    <div className="feature-icon1"><i className="fas fa-user-tie"></i></div>
+                                    <h4>100% Personal Driver Service</h4>
+                                    <p>Your personal driver will be with you throughout the journey, ensuring a private and tailored experience.</p>
+                                </div>
+                                <div className="feature-card-enhanced">
+                                    <div className="feature-icon2"><i className="fas fa-car-side"></i></div>
+                                    <h4>Good & Clean Vehicles</h4>
+                                    <p>Well-maintained, comfortable, and spotless vehicles for a premium travel experience.</p>
+                                </div>
+                                <div className="feature-card-enhanced">
+                                    <div className="feature-icon3"><i className="fas fa-road"></i></div>
+                                    <h4>No Kilometer Limit Per Day</h4>
+                                    <p>Explore freely without worrying about extra charges. No hidden fees or mileage restrictions.</p>
+                                </div>
+                                <div className="feature-card-enhanced">
+                                    <div className="feature-icon4"><i className="fas fa-medal"></i></div>
+                                    <h4>100% Satisfaction Guaranteed</h4>
+                                    <p>Your happiness is our priority. We go above and beyond to ensure an unforgettable journey.</p>
+                                </div>
+                                <div className="feature-card-enhanced">
+                                    <div className="feature-icon5"><i className="fas fa-map-marked-alt"></i></div>
+                                    <h4>Local Experts</h4>
+                                    <p>Our drivers are knowledgeable locals who will share hidden gems and authentic experiences.</p>
+                                </div>
+                                <div className="feature-card-enhanced">
+                                    <div className="feature-icon6"><i className="fas fa-shield-alt"></i></div>
+                                    <h4>Your Safety Our Priority</h4>
+                                    <p>Fully licensed, insured, and safety-certified vehicles with professional drivers.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Social Media Section - New Addition */}
+                        <div className="social-media-section">
+                            <h3><i className="fas fa-share-alt"></i> Follow Our Adventures</h3>
+                            <div className="social-icons-container">
+                                <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="social-icon-link1 instagram-icon" aria-label="Follow us on Instagram">
+                                    <i className="fab fa-instagram"></i>
+                                </a>
+                                <a href="https://www.tiktok.com/" target="_blank" rel="noopener noreferrer" className="social-icon-link2 tiktok-icon" aria-label="Follow us on TikTok">
+                                    <i className="fab fa-tiktok"></i>
+                                </a>
+                                <a href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" className="social-icon-link3 youtube-icon" aria-label="Subscribe on YouTube">
+                                    <i className="fab fa-youtube"></i>
+                                </a>
+                            </div>
+                            <p className="social-follow-text">Join our community for travel inspiration, tips, and exclusive offers!</p>
+                        </div>
+
                         <div className="map-section">
                             <h3><i className="fas fa-map-marker-alt"></i> Explore Sri Lanka</h3>
                             <div className="map-container">
@@ -802,16 +941,10 @@ function HomePage() {
                 )}
             </main>
             <footer>
-                <p>© 2025 Luxe Lanka — Premium Driver & Tour Experts</p>
+                <p>© 2026 Tour Guide SriLanka — Premium Driver & Tour Experts</p>
                 <div className="footer-social">
-                    <a href="https://wa.me/94725335460" target="_blank" rel="noopener noreferrer">
+                    <a href="https://wa.me/94774120009" target="_blank" rel="noopener noreferrer">
                         <i className="fab fa-whatsapp"></i>
-                    </a>
-                    <a href="https://instagram.com/luxelanka" target="_blank" rel="noopener noreferrer">
-                        <i className="fab fa-instagram"></i>
-                    </a>
-                    <a href="mailto:hello@luxelanka.com">
-                        <i className="fas fa-envelope"></i>
                     </a>
                 </div>
             </footer>

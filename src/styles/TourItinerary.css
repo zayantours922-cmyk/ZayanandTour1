@@ -1,4 +1,4 @@
-/* TourItinerary.css - Updated with proper alignment */
+/* TourItinerary.css - Updated with responsive background images */
 
 * {
   margin: 0;
@@ -8,9 +8,35 @@
 
 .itinerary-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fffaf5 0%, #fff5ed 100%);
+  background-repeat: no-repeat;
+  background-color: #fff5ed;
 }
 
+/* Desktop background image (769px and above) */
+@media (min-width: 769px) {
+  .itinerary-page {
+    background-image: url('../assets/images/wp9233808-elephant-4k-pc-wallpapers.jpg');
+    background-size: cover;
+    background-position: center top 5%;
+    background-attachment: fixed;
+  }
+}
+
+/* Mobile background image (768px and below) */
+@media (max-width: 768px) {
+  .itinerary-page {
+    background-image: url('../assets/images/imd.png');
+    background-color: #a3cae9;
+    background-size: 430px 932px; /* Fixed dimensions */
+    background-position: center center;
+    background-repeat: no-repeat; /* Prevents tiling */
+    background-attachment: scroll;
+    
+    /* Ensure the container has these exact dimensions */
+    width: 430px;
+    height: 2132px;
+  }
+}
 /* Main Navigation - Top */
 .main-nav {
   background: rgba(255, 248, 240, 0.98);
@@ -31,9 +57,9 @@
 }
 
 .logo {
-  font-size: 1.6rem;
-  font-weight: 800;
-  background: linear-gradient(125deg, #e85d04, #ff9f4a);
+  font-size: 1.5rem;
+  font-weight: 900;
+  background-image: url('https://i.pinimg.com/1200x/9b/3b/c3/9b3bc3d44c50b915fa8c0beef67b20c0.jpg');
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -43,11 +69,40 @@
   display: none;
   background: rgba(255, 123, 44, 0.2);
   border: 1px solid rgba(255, 123, 44, 0.4);
-  border-radius: 50px;
-  padding: 0.6rem 1rem;
-  font-size: 1.3rem;
-  color: #ff7b2c;
+  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.menu-toggle:hover {
+  background: rgba(255, 123, 44, 0.4);
+  transform: scale(1.05);
+}
+
+.hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 28px;
+  height: 20px;
+  justify-content: center;
+}
+
+.hamburger-icon span {
+  display: block;
+  width: 70%;
+  height: 4px;
+  background: linear-gradient(125deg, #e85d04, #ff9f4a);
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.menu-text {
+  display: none;
+  font-size: 0.8rem;
+  color: white;
+  margin-top: 0.2rem;
 }
 
 .nav-links {
@@ -56,7 +111,7 @@
 }
 
 .glass-nav-btn {
-  background: rgba(255, 255, 245, 0.6);
+  background: rgba(255, 255, 245, 0.445);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 123, 44, 0.3);
   border-radius: 60px;
@@ -72,9 +127,36 @@
 
 .glass-nav-btn:hover,
 .glass-nav-btn.active {
-  background: #ff7b2c;
+  background-color: transparent;
+  background-image: url('https://i.pinimg.com/1200x/9b/3b/c3/9b3bc3d44c50b915fa8c0beef67b20c0.jpg');
+  color: rgb(255, 255, 255);
+}
+
+.page-action-row {
+  display: flex;
+  justify-content: flex-start;
+  padding: 1rem 1.5rem;
+}
+
+.page-back-btn {
+  background: linear-gradient(135deg, #ff7b2c, #ff9f4a);
   color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  box-shadow: 0 15px 30px rgba(255, 123, 44, 0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.page-back-btn:hover {
   transform: translateY(-2px);
+  box-shadow: 0 20px 35px rgba(255, 123, 44, 0.25);
 }
 
 /* Orange Info Bar - Below Main Navigation */
@@ -117,7 +199,7 @@
   width: 55px;
   height: 55px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.575);
   backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 123, 44, 0.3);
   display: flex;
@@ -190,7 +272,7 @@
   align-items: center;
   gap: 0.5rem;
   color: #666;
-  background: white;
+  background: rgb(250, 247, 247);
   padding: 0.25rem 1rem;
   border-radius: 40px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
@@ -202,8 +284,10 @@
 
 .description {
   max-width: 800px;
+  font-size: 1.4rem;
+  font-family:Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
   margin: 0 auto 1.5rem;
-  color: #666;
+  color: #ffffff;
   line-height: 1.6;
 }
 
@@ -228,10 +312,10 @@
 
 /* Itinerary Days */
 .itinerary-days {
-  background: white;
+  background: rgba(255, 255, 255, 0.616);
   border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.397);
   margin-bottom: 2rem;
 }
 
@@ -353,11 +437,11 @@
 
 /* Tour Summary */
 .tour-summary {
-  background: white;
+  background: rgba(245, 243, 243, 0.5);
   border-radius: 24px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.473);
 }
 
 .tour-summary h3 {
@@ -394,7 +478,7 @@
 
 /* Package Includes */
 .includes-section {
-  background: white;
+  background: rgba(235, 231, 231, 0.651);
   border-radius: 24px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -442,7 +526,7 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  color: white;
+  color: rgb(255, 255, 255);
 }
 
 .flexible-content i {
@@ -601,10 +685,22 @@ footer {
   }
 }
 
-/* Mobile Responsive */
+/* Mobile Responsive (768px and below) */
 @media (max-width: 768px) {
   .menu-toggle {
     display: block;
+  }
+  
+  .menu-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .menu-text {
+    display: block;
+    color:#000000;
+    font-size: 1rem;
   }
   
   .nav-links {
@@ -700,5 +796,71 @@ footer {
   .float-glass-btn {
     width: 45px;
     height: 45px;
+  }
+}
+
+/* Extra small devices (phones below 480px) */
+@media (max-width: 480px) {
+  .itinerary-page {
+    background-attachment: scroll;
+  }
+  
+  .itinerary-header h1 {
+    font-size: 1.3rem;
+  }
+  
+  .tour-meta span {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.8rem;
+  }
+  
+  .day-image img {
+    height: 180px;
+  }
+  
+  .day-content h3 {
+    font-size: 1.1rem;
+  }
+  
+  .activities-list li {
+    font-size: 0.8rem;
+  }
+  
+  .highlights-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .highlight-item {
+    padding: 0.5rem;
+  }
+  
+  .highlight-item span {
+    font-size: 0.8rem;
+  }
+  
+  .includes-grid div {
+    font-size: 0.8rem;
+  }
+  
+  .flexible-content h4 {
+    font-size: 1rem;
+  }
+  
+  .flexible-content p {
+    font-size: 0.75rem;
+  }
+  
+  .customize-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  footer {
+    padding: 1.5rem 1rem;
+    margin: 1rem 1rem 1rem;
+  }
+  
+  footer p {
+    font-size: 0.8rem;
   }
 }

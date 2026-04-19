@@ -72,9 +72,11 @@ function RoundTourDetail() {
             <span className="meta-item">
               <i className="fas fa-calendar-alt"></i> {tour.duration}
             </span>
-            <span className="meta-item">
-              <i className="fas fa-tag"></i> {tour.price} per person
-            </span>
+            {tour.price !== '' && tour.price != null && (
+              <span className="meta-item">
+                <i className="fas fa-tag"></i> {tour.price} per person
+              </span>
+            )}
           </div>
           <button onClick={handleInquiry} className="inquiry-btn">
             <i className="fab fa-whatsapp"></i> Inquire Now
