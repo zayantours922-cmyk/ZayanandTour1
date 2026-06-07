@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-   "homepage": ".",
+  "homepage": ".",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -12,18 +12,22 @@
     "axios": "^1.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-helmet": "^6.1.0",
+    "react-helmet-async": "^3.0.0",
     "react-router-dom": "^6.20.0",
     "react-scripts": "5.0.1",
     "swiper": "^11.0.7",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-   "start": "react-scripts start",
+    "start": "react-scripts start",
     "build": "cross-env DISABLE_ESLINT_PLUGIN=true CI=false react-scripts build",
     "build:production": "cross-env DISABLE_ESLINT_PLUGIN=true CI=false react-scripts build",
+    "build:sitemap": "node sitemap-generator.js",
+    "build:all": "npm run build && npm run build:sitemap",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
-},
+  },
   "eslintConfig": {
     "extends": [
       "react-app",
@@ -43,9 +47,10 @@
     ]
   },
   "engines": {
-  "node": "20.x"
-},
+    "node": "20.x"
+  },
   "devDependencies": {
-    "cross-env": "^10.1.0"
+    "cross-env": "^10.1.0",
+    "sitemap": "^9.0.1"
   }
 }

@@ -77,17 +77,77 @@ const api = {
     return response.json();
   },
   
-  // Admin
-  login: async (username, password) => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
+  // Gallery
+  getGalleryImages: async (category = null) => {
+    const url = category ? `${API_BASE_URL}/gallery?category=${category}` : `${API_BASE_URL}/gallery`;
+    const response = await fetch(url);
+    return response.json();
+  },
+  
+  getGalleryCategories: async () => {
+    const response = await fetch(`${API_BASE_URL}/gallery/categories`);
+    return response.json();
+  },
+  
+  getAdminGalleryImages: async () => {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/gallery/admin`, {
       headers: {
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ username, password }),
     });
     return response.json();
   },
-};
+  
+  addGalleryImage: async (imageData) => {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/gallery`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(imageData),
+    });
+    return response.json();
+  },
+  
+  updateGalleryImage: async (id, imageData) => {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/gallery/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(imageData),
+    });
+    return response.json();
+  },
+  
+  deleteGalleryImage: async (id) => {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/gallery/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    return response.json();
+  },
+  
+  toggleGalleryImageStatus: async (id, isActive) => {
+    const token = localStorage.getItem('adminToken');
+    const response = await fetch(`${API_BASE_URL}/gallery/${id}/toggle-status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ is_active: isActive }),
+    });
+    return response.json();
+  }
+};  // <-- This closing brace was missing!
 
 export default api;

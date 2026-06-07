@@ -9,7 +9,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // Service functions for LuxeLanka
 export const luxelankaService = {
     // Get all packages
-     async getAdminByUsername(username) {
+    async getAdminByUsername(username) {
         const { data, error } = await supabase
             .from('admins')
             .select('*')
@@ -39,6 +39,7 @@ export const luxelankaService = {
         // This is simplified - use Supabase Auth for production
         return admin;
     },
+    
     async getPackages() {
         const { data, error } = await supabase
             .from('packages')
@@ -124,5 +125,68 @@ export const luxelankaService = {
         
         if (error) throw error
         return data
+    },
+
+    // ================= SIMPLIFIED GALLERY METHODS (Only image_url) =================
+    
+    // Get all gallery images
+    async getGalleryImages() {
+        const { data, error } = await supabase
+            .from('gallery')
+            .select('*')
+            .order('created_at', { ascending: false })
+        
+        if (error) throw error
+        return data
+    },
+
+    // Add single image
+    async addGalleryImage(imageUrl) {
+        const { data, error } = await supabase
+            .from('gallery')
+            .insert([{
+                image_url: imageUrl
+            }])
+            .select()
+        
+        if (error) throw error
+        return data[0]
+    },
+
+    // Add multiple images at once (FIXED - only image_url)
+    async addMultipleGalleryImages(imageUrls) {
+        const imagesToInsert = imageUrls.map(imageUrl => ({
+            image_url: imageUrl
+        }));
+        
+        const { data, error } = await supabase
+            .from('gallery')
+            .insert(imagesToInsert)
+            .select();
+        
+        if (error) throw error;
+        return data;
+    },
+
+    // Delete single image
+    async deleteGalleryImage(id) {
+        const { error } = await supabase
+            .from('gallery')
+            .delete()
+            .eq('id', id)
+        
+        if (error) throw error
+        return true
+    },
+
+    // Delete multiple images
+    async deleteMultipleGalleryImages(ids) {
+        const { error } = await supabase
+            .from('gallery')
+            .delete()
+            .in('id', ids)
+        
+        if (error) throw error
+        return true
     }
 }

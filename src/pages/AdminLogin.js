@@ -1,21 +1,68 @@
-import React, { useState } from 'react';
+// AdminLogin.js - Updated with creative UI elements
+
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseService';
-import '../styles/Admin.css';
+import '../styles/AdminLogin.css';
 
 function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  // Create floating particles
+  useEffect(() => {
+    const createParticles = () => {
+      const particleCount = 40;
+      const particlesContainer = document.querySelector('.admin-login');
+      
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        const size = Math.random() * 5 + 2;
+        const left = Math.random() * 100;
+        const animationDuration = Math.random() * 12 + 6;
+        const animationDelay = Math.random() * 8;
+        
+        particle.style.cssText = `
+          width: ${size}px;
+          height: ${size}px;
+          left: ${left}%;
+          animation-duration: ${animationDuration}s;
+          animation-delay: ${animationDelay}s;
+        `;
+        
+        if (particlesContainer) {
+          particlesContainer.appendChild(particle);
+        }
+      }
+    };
+    
+    createParticles();
+    
+    // Cleanup particles on unmount
+    return () => {
+      const particles = document.querySelectorAll('.particle');
+      particles.forEach(particle => particle.remove());
+    };
+  }, []);
+
   // Check if already logged in
-  React.useEffect(() => {
+  useEffect(() => {
     const checkAuth = async () => {
+      const adminToken = localStorage.getItem('adminToken');
+      const adminUsername = localStorage.getItem('adminUsername');
+      
+      if (adminToken && adminUsername) {
+        navigate('/tours22$admin');
+        return;
+      }
+      
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // Verify if user is admin
         const { data: adminData } = await supabase
           .from('admins')
           .select('*')
@@ -23,7 +70,7 @@ function AdminLogin() {
           .single();
         
         if (adminData) {
-          navigate('/admin');
+          navigate('/tours22$admin');
         }
       }
     };
@@ -36,25 +83,21 @@ function AdminLogin() {
     setLoading(true);
 
     try {
-      // First, authenticate with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: `${username}@tourguidesrilanka028@gmail.com`, // Convert username to email format
+        email: `${username}@tourguidesrilanka028@gmail.com`,
         password: password
       });
 
       if (authError) {
-        // If auth fails, check hardcoded admin (fallback)
-        if (username === 'admin' && password === 'admin123') {
-          // For demo purposes, create a session
+        if (username === 'zayaanrushda' && password === 'toursrisan4002') {
           localStorage.setItem('adminToken', 'dummy-token-' + Date.now());
           localStorage.setItem('adminUsername', username);
-          navigate('/admin');
+          navigate('/tours22$admin');
           return;
         }
         throw new Error('Invalid username or password');
       }
 
-      // Check if user exists in admins table
       const { data: adminData, error: adminError } = await supabase
         .from('admins')
         .select('*')
@@ -62,17 +105,15 @@ function AdminLogin() {
         .single();
 
       if (adminError || !adminData) {
-        // User authenticated but not an admin
         await supabase.auth.signOut();
         throw new Error('Unauthorized access. Admin privileges required.');
       }
 
-      // Store session info
       localStorage.setItem('adminToken', authData.session.access_token);
       localStorage.setItem('adminUsername', adminData.username);
       localStorage.setItem('adminId', adminData.id);
       
-      navigate('/admin');
+      navigate('/tours22$admin');
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
       console.error('Login error:', err);
@@ -83,12 +124,34 @@ function AdminLogin() {
 
   return (
     <div className="admin-login">
+      {/* Animated Orbs */}
+      <div className="glow-orb glow-orb-1"></div>
+      <div className="glow-orb glow-orb-2"></div>
+      <div className="glow-orb glow-orb-3"></div>
+      
+      {/* Animated Waves */}
+      <div className="waves">
+        <div className="wave"></div>
+        <div className="wave"></div>
+      </div>
+      
+      {/* Login Card */}
       <div className="login-container">
-        <h2>Admin Login</h2>
-        <p className="login-subtitle">Access LuxeLanka Admin Panel</p>
+        <div className="login-badge">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
         
+        <h2>Tour Guide SriLanka</h2>
+        <p className="login-subtitle">Admin Portal</p>
+        
+        {/* Error Message */}
         {error && <div className="error-message">{error}</div>}
         
+        {/* Login Form */}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <input
@@ -98,29 +161,44 @@ function AdminLogin() {
               onChange={(e) => setUsername(e.target.value)}
               required
               disabled={loading}
+              autoComplete="username"
             />
           </div>
           
           <div className="form-group">
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              autoComplete="current-password"
             />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex="-1"
+            >
+              {showPassword ? '👁️' : '👁️‍🗨️'}
+            </button>
           </div>
           
           <button type="submit" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Authenticating...
+              </>
+            ) : (
+              'Access Dashboard →'
+            )}
           </button>
         </form>
         
-        <div className="login-info">
-          <p>Demo Credentials:</p>
-          <p>Username: admin</p>
-          <p>Password: admin123</p>
+        <div className="login-footer">
+          <p>Secure Admin Access Only</p>
         </div>
       </div>
     </div>
